@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "id": "sys-monitor",
+  "name": "System Monitor",
+  "version": "1.0.0",
+  "author": "binoymanoj",
+  "description": "System monitoring bar widget for Omarchy displaying live CPU, RAM, and Network status with popup configuration",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "System Monitor",
+    "description": "Live CPU usage %, RAM %, and Network speed on the topbar with detailed stats and configurable popup",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "showCpu": true,
+      "showRam": true,
+      "showNet": true,
+      "showNetUpload": false,
+      "showIcons": true,
+      "refreshInterval": 2000
+    },
+    "schema": [
+      {
+        "key": "showCpu",
+        "type": "boolean",
+        "label": "Show CPU on topbar",
+        "defaultValue": true,
+        "description": "Display CPU utilization percentage on the bar."
+      },
+      {
+        "key": "showRam",
+        "type": "boolean",
+        "label": "Show RAM on topbar",
+        "defaultValue": true,
+        "description": "Display RAM utilization percentage on the bar."
+      },
+      {
+        "key": "showNet",
+        "type": "boolean",
+        "label": "Show Download Speed on topbar",
+        "defaultValue": true,
+        "description": "Display current network download rate on the bar."
+      },
+      {
+        "key": "showNetUpload",
+        "type": "boolean",
+        "label": "Show Upload Speed on topbar",
+        "defaultValue": false,
+        "description": "Display current network upload rate on the bar."
+      },
+      {
+        "key": "showIcons",
+        "type": "boolean",
+        "label": "Show icons on topbar",
+        "defaultValue": true,
+        "description": "Display metric icons beside the values on the bar."
+      },
+      {
+        "key": "refreshInterval",
+        "type": "integer",
+        "label": "Refresh interval (ms)",
+        "min": 500,
+        "max": 10000,
+        "step": 500,
+        "defaultValue": 2000,
+        "description": "How frequently system statistics are updated."
+      }
+    ]
+  }
+}
