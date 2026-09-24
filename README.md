@@ -33,38 +33,43 @@ Shows live CPU utilization, RAM usage, and Network speed directly on your topbar
 - **Zero-Process Overhead**:
   - Reads directly from Linux `/proc/stat`, `/proc/meminfo`, `/proc/net/dev`, `/proc/loadavg`, and `/proc/uptime` using Quickshell's native C++ `FileView`.
   - No background bash/subshell spawns, guaranteeing ultra-low power consumption and zero system latency.
+  - No `sudo` or `pkexec` required.
 - **Persistent Preferences**:
   - Saves your preferences to `~/.local/state/omarchy/settings/sys-monitor.json` and syncs with Omarchy's `shell.json`.
 
 ---
 
+## 📦 Requirements & Dependencies
+
+- **Desktop Shell**: [Omarchy Quattro](https://omarchy.org/) with Quickshell.
+- **System**: Linux with `/proc` filesystem.
+- **Optional**: `btop` (launched via the popup's "btop" button if installed).
+
+---
+
 ## 🚀 Installation
 
-### Automated Install
-
-Run the included installation script from this directory:
+Install directly using the Omarchy plugin CLI:
 
 ```bash
-./install.sh
+omarchy plugin add https://github.com/binoymanoj/sys-monitor-omarchy.git --enable --yes
 ```
 
-### Manual Install
+To update to the latest version:
 
-1. Link or copy this directory into your Omarchy plugins folder:
-   ```bash
-   ln -s "$(pwd)" ~/.config/omarchy/plugins/sys-monitor
-   ```
+```bash
+omarchy plugin update sys-monitor --yes
+```
 
-2. Validate and rescan the plugin:
-   ```bash
-   omarchy plugin validate ~/.config/omarchy/plugins/sys-monitor
-   omarchy-shell shell rescanPlugins
-   ```
+---
 
-3. Enable the plugin:
-   ```bash
-   omarchy plugin enable sys-monitor
-   ```
+## 🗑️ Removal
+
+To disable and remove the plugin from Omarchy:
+
+```bash
+omarchy plugin remove sys-monitor --yes
+```
 
 ---
 
@@ -75,14 +80,14 @@ Run the included installation script from this directory:
 | **Toggle Popup Window** | Left-Click on bar widget | Opens or closes the detailed diagnostic and settings popup |
 | **Launch Task Manager** | Right-Click on bar widget | Spawns `btop` in your configured terminal |
 | **Force Immediate Refresh** | Middle-Click on bar widget | Forces an instant reload of all system stats |
-| **Close Popup** | Escape key / Click outside | Closes the popup window |
+| **Close Popup** | <kbd>Esc</kbd> or click outside | Closes the popup window |
 
 ### Custom Keyboard Shortcut
 
 To bind a keyboard shortcut in Hyprland to summon or toggle the System Monitor popup:
 
 ```hyprlang
-# In ~/.config/hypr/hyprland.conf or ~/.config/omarchy/hooks:
+# In ~/.config/hypr/hyprland.conf:
 bind = SUPER, M, exec, omarchy-shell shell toggle sys-monitor '{}'
 ```
 
@@ -109,7 +114,8 @@ omarchy bar move sys-monitor --section right --after omarchy.tray
 ├── BarWidget.qml        # Main Quickshell bar widget, topbar layout, and popup window
 ├── SysMonitorModel.js   # Pure JS parsing engine for /proc statistics and speed formatting
 ├── manifest.json        # Omarchy shell plugin manifest
-├── install.sh           # Automated plugin symlink and activation script
+├── LICENSE              # MIT License
+├── preview.png          # High-resolution screenshot preview
 └── README.md            # Documentation
 ```
 
@@ -117,4 +123,4 @@ omarchy bar move sys-monitor --section right --after omarchy.tray
 
 ## 📄 License
 
-MIT License. Designed for Omarchy and Arch Linux.
+This project is licensed under the [MIT License](LICENSE).

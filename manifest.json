@@ -4,6 +4,8 @@
   "name": "System Monitor",
   "version": "1.0.0",
   "author": "binoymanoj",
+  "license": "MIT",
+  "homepage": "https://github.com/binoymanoj/sys-monitor-omarchy",
   "description": "System monitoring bar widget for Omarchy displaying live CPU, RAM, and Network status with popup configuration",
   "kinds": [
     "bar-widget"
