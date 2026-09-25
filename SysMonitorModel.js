@@ -6,6 +6,8 @@ function defaultSettings() {
   return {
     showCpu: true,
     showRam: true,
+    showStorage: true,
+    showExternalStorage: true,
     showNet: true,
     showNetUpload: false,
     showIcons: true,
@@ -282,4 +284,220 @@ function parseCpuModel(cpuinfoText) {
     }
   }
   return "Processor";
+}
+
+function formatBytes(bytes) {
+  var b = Math.max(0, Number(bytes) || 0);
+  if (b === 0) return "0 GB";
+  var k = 1024;
+  var sizes = ["B", "KB", "MB", "GB", "TB", "PB"];
+  var i = Math.floor(Math.log(b) / Math.log(k));
+  if (i < 0) i = 0;
+  if (i >= sizes.length) i = sizes.length - 1;
+  var val = b / Math.pow(k, i);
+  return (val < 10 && i > 1 ? val.toFixed(1) : (i > 1 ? val.toFixed(1) : Math.round(val))) + " " + sizes[i];
+}
+
+function defaultStorageData() {
+  return {
+    internal: {
+      name: "Root",
+      model: "Internal Storage",
+      mountpoint: "/",
+      fstype: "",
+      totalBytes: 0,
+      usedBytes: 0,
+      availBytes: 0,
+      totalFormatted: "0 GB",
+      usedFormatted: "0 GB",
+      availFormatted: "0 GB",
+      percent: 0,
+      partitions: []
+    },
+    external: [],
+    hasExternal: false,
+    externalCount: 0,
+    percent: 0
+  };
+}
+
+function parseStorage(lsblkText) {
+  var rootRes = defaultStorageData();
+  if (!lsblkText || typeof lsblkText !== "string") return rootRes;
+
+  var parsed;
+  try {
+    parsed = JSON.parse(lsblkText);
+  } catch (e) {
+    return rootRes;
+  }
+
+  var blockdevices = parsed.blockdevices || [];
+  var internalRootNode = null;
+  var internalRootDisk = null;
+  var allInternalParts = [];
+  var externalItems = [];
+
+  function getMounts(node) {
+    var mounts = [];
+    if (Array.isArray(node.mountpoints)) {
+      for (var i = 0; i < node.mountpoints.length; i++) {
+        if (node.mountpoints[i] && node.mountpoints[i] !== "[SWAP]") {
+          mounts.push(node.mountpoints[i]);
+        }
+      }
+    }
+    if (node.mountpoint && node.mountpoint !== "[SWAP]" && mounts.indexOf(node.mountpoint) === -1) {
+      mounts.push(node.mountpoint);
+    }
+    return mounts;
+  }
+
+  // First pass: locate the device containing root "/"
+  function findRoot(node, parentDisk) {
+    var mounts = getMounts(node);
+    if (mounts.indexOf("/") !== -1) {
+      internalRootNode = node;
+      internalRootDisk = parentDisk || node;
+    }
+    if (node.children && node.children.length > 0) {
+      for (var c = 0; c < node.children.length; c++) {
+        findRoot(node.children[c], parentDisk || node);
+      }
+    }
+  }
+
+  for (var i = 0; i < blockdevices.length; i++) {
+    var dev = blockdevices[i];
+    if (dev.name && (dev.name.indexOf("loop") === 0 || dev.name.indexOf("zram") === 0)) continue;
+    if (dev.fstype === "swap") continue;
+    findRoot(dev, dev);
+  }
+
+  // Second pass: collect internal partitions and external storage devices
+  for (var i = 0; i < blockdevices.length; i++) {
+    var dev = blockdevices[i];
+    if (dev.name && (dev.name.indexOf("loop") === 0 || dev.name.indexOf("zram") === 0)) continue;
+    if (dev.fstype === "swap") continue;
+
+    var isDevInternalRoot = (internalRootDisk && dev.name === internalRootDisk.name);
+    var isDevExternal = !isDevInternalRoot && (dev.tran === "usb" || dev.rm === true || dev.rm === 1 || dev.hotplug === true);
+
+    function collectParts(node, parentDev, isExt) {
+      var mounts = getMounts(node);
+      var hasChildren = node.children && node.children.length > 0;
+
+      for (var m = 0; m < mounts.length; m++) {
+        if (mounts[m].indexOf("/run/media/") === 0 || mounts[m].indexOf("/media/") === 0) {
+          isExt = true;
+        }
+      }
+
+      if (!hasChildren) {
+        if (node.fstype === "swap") return;
+        var size = Number(node.size) || 0;
+        var used = Number(node.fsused);
+        var avail = Number(node.fsavail);
+        var pct = 0;
+        var mounted = mounts.length > 0;
+
+        if (node["fsuse%"]) {
+          pct = parseInt(node["fsuse%"], 10) || 0;
+        } else if (!isNaN(used) && !isNaN(avail) && (used + avail) > 0) {
+          pct = Math.round((used / (used + avail)) * 100);
+        }
+
+        var partObj = {
+          name: node.name || "",
+          path: node.path || ("/dev/" + node.name),
+          label: node.label || "",
+          model: parentDev.model || node.model || "",
+          fstype: node.fstype || "",
+          size: size,
+          used: isNaN(used) ? 0 : used,
+          avail: isNaN(avail) ? 0 : avail,
+          sizeFormatted: formatBytes(size),
+          usedFormatted: mounted && !isNaN(used) ? formatBytes(used) : "-",
+          availFormatted: mounted && !isNaN(avail) ? formatBytes(avail) : "-",
+          percent: pct,
+          mountpoint: mounts[0] || "",
+          mountpoints: mounts,
+          isMounted: mounted
+        };
+
+        if (isExt) {
+          var nameLabel = partObj.label || partObj.model || partObj.name;
+          if (partObj.label && partObj.model && partObj.label !== partObj.model) {
+            partObj.displayName = partObj.label + " (" + partObj.model + ")";
+          } else {
+            partObj.displayName = nameLabel;
+          }
+          externalItems.push(partObj);
+        } else {
+          allInternalParts.push(partObj);
+        }
+      } else {
+        for (var c = 0; c < node.children.length; c++) {
+          collectParts(node.children[c], parentDev, isExt);
+        }
+      }
+    }
+
+    collectParts(dev, dev, isDevExternal);
+  }
+
+  // Format internal root info
+  if (internalRootNode) {
+    var rUsed = Number(internalRootNode.fsused);
+    var rAvail = Number(internalRootNode.fsavail);
+    var rSize = Number(internalRootNode.size) || 0;
+    var rPct = 0;
+    if (internalRootNode["fsuse%"]) {
+      rPct = parseInt(internalRootNode["fsuse%"], 10) || 0;
+    } else if (!isNaN(rUsed) && !isNaN(rAvail) && (rUsed + rAvail) > 0) {
+      rPct = Math.round((rUsed / (rUsed + rAvail)) * 100);
+    }
+
+    rootRes.internal = {
+      name: internalRootNode.name || "root",
+      model: (internalRootDisk && internalRootDisk.model) || "System Disk",
+      mountpoint: "/",
+      fstype: internalRootNode.fstype || "",
+      totalBytes: rSize,
+      usedBytes: isNaN(rUsed) ? 0 : rUsed,
+      availBytes: isNaN(rAvail) ? 0 : rAvail,
+      totalFormatted: formatBytes(rSize),
+      usedFormatted: isNaN(rUsed) ? "0 GB" : formatBytes(rUsed),
+      availFormatted: isNaN(rAvail) ? "0 GB" : formatBytes(rAvail),
+      percent: rPct,
+      partitions: allInternalParts.filter(function(p) {
+        return p.mountpoint && p.mountpoint !== "/" && p.mountpoints.indexOf("/") === -1;
+      })
+    };
+    rootRes.percent = rPct;
+  } else if (allInternalParts.length > 0) {
+    // Fallback if no explicit "/" was found
+    var first = allInternalParts[0];
+    rootRes.internal = {
+      name: first.name,
+      model: first.model || "Internal Disk",
+      mountpoint: first.mountpoint || "/",
+      fstype: first.fstype,
+      totalBytes: first.size,
+      usedBytes: first.used,
+      availBytes: first.avail,
+      totalFormatted: first.sizeFormatted,
+      usedFormatted: first.usedFormatted,
+      availFormatted: first.availFormatted,
+      percent: first.percent,
+      partitions: allInternalParts.slice(1)
+    };
+    rootRes.percent = first.percent;
+  }
+
+  rootRes.external = externalItems;
+  rootRes.hasExternal = externalItems.length > 0;
+  rootRes.externalCount = externalItems.length;
+
+  return rootRes;
 }

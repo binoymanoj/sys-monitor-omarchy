@@ -15,13 +15,15 @@
   },
   "barWidget": {
     "displayName": "System Monitor",
-    "description": "Live CPU usage %, RAM %, and Network speed on the topbar with detailed stats and configurable popup",
+    "description": "Live CPU usage %, RAM %, Storage %, and Network speed on the topbar with detailed stats and configurable popup",
     "category": "System",
     "allowMultiple": false,
     "defaultSection": "right",
     "defaults": {
       "showCpu": true,
       "showRam": true,
+      "showStorage": true,
+      "showExternalStorage": true,
       "showNet": true,
       "showNetUpload": false,
       "showIcons": true,
@@ -41,6 +43,20 @@
         "label": "Show RAM on topbar",
         "defaultValue": true,
         "description": "Display RAM utilization percentage on the bar."
+      },
+      {
+        "key": "showStorage",
+        "type": "boolean",
+        "label": "Show Storage on topbar",
+        "defaultValue": true,
+        "description": "Display internal storage utilization percentage on the bar."
+      },
+      {
+        "key": "showExternalStorage",
+        "type": "boolean",
+        "label": "Show External Storage on topbar",
+        "defaultValue": true,
+        "description": "Display external drive indicator/usage on the bar when attached."
       },
       {
         "key": "showNet",
