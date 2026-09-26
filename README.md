@@ -27,7 +27,9 @@ Shows live CPU utilization, RAM usage, and Network speed directly on your topbar
   - **Detailed Internal Storage Card**: Root filesystem usage progress bar, used/total/available GB, mount point, filesystem format, disk model, and secondary partitions.
   - **Dynamic External Storage Card**: Automatically detects attached external drives, USB thumb drives, and external SSDs/HDDs; shows capacity, used/free space, mount status, and one-click "Open" in file manager button.
   - **Detailed Network Card**: Active interface detection, live download & upload speed cards.
-  - **Visual Configuration Toggles**:
+    - **Icon-Only Mode**: Option to display just 1 clean icon on the bar instead of stats; clicking the icon opens the full stats and diagnostics popup. Even if you disable all individual stats, this icon stays present so the widget is never an empty hole!
+    - **Show Main Icon**: Toggle whether the main system monitor icon appears on the bar.
+    - **Customizable Topbar Icon**: Pick between CPU (``), Gauge (`󰻠`), Heartbeat (``), Chip (`󰍛`), Storage (`󰋊`), Dashboard (`󰾆`), or any custom Nerd Font glyph.
     - Toggle CPU display on the bar on/off.
     - Toggle RAM display on the bar on/off.
     - Toggle Internal Storage display on the bar on/off.

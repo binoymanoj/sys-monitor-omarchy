@@ -4,6 +4,9 @@
 
 function defaultSettings() {
   return {
+    showMainIcon: true,
+    iconOnly: false,
+    barIcon: "",
     showCpu: true,
     showRam: true,
     showStorage: true,

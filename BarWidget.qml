@@ -11,6 +11,9 @@ BarWidget {
   moduleName: "sys-monitor"
 
   // Settings State
+  property bool showMainIcon: true
+  property bool iconOnly: false
+  property string barIcon: ""
   property bool showCpu: true
   property bool showRam: true
   property bool showStorage: true
@@ -54,6 +57,7 @@ BarWidget {
   readonly property bool ramUrgent: ramPercent >= 90
   readonly property int storagePercent: storageData && storageData.internal ? (storageData.internal.percent || 0) : 0
   readonly property bool storageUrgent: storagePercent >= 90
+  readonly property bool anyUrgent: cpuUrgent || ramUrgent || storageUrgent
   readonly property bool hasExternalStorage: storageData ? (storageData.hasExternal || false) : false
   readonly property var externalDrives: storageData && storageData.external ? storageData.external : []
   readonly property string externalBarText: {
@@ -80,7 +84,9 @@ BarWidget {
   readonly property color barForeground: bar ? bar.barForeground : Color.foreground
   readonly property color activeUrgentColor: bar ? bar.urgent : Color.urgent
 
-  readonly property bool hasAnyMetricVisible: showCpu || showRam || showStorage || (showExternalStorage && hasExternalStorage) || showNet || showNetUpload
+  readonly property bool hasAnyStatVisible: showCpu || showRam || showStorage || (showExternalStorage && hasExternalStorage) || showNet || showNetUpload
+  readonly property bool isIconOnlyMode: iconOnly || !hasAnyStatVisible
+  readonly property bool hasAnyMetricVisible: true
 
   readonly property string tooltipString: {
     var str = "System Monitor\n" +
@@ -230,6 +236,9 @@ BarWidget {
   }
 
   function applySettingsFromHost() {
+    root.showMainIcon = setting("showMainIcon", true) === true
+    root.iconOnly = setting("iconOnly", false) === true
+    root.barIcon = setting("barIcon", "") || ""
     root.showCpu = setting("showCpu", true) === true
     root.showRam = setting("showRam", true) === true
     root.showStorage = setting("showStorage", true) === true
@@ -248,6 +257,9 @@ BarWidget {
     try {
       var parsed = JSON.parse(raw)
       if (parsed && typeof parsed === "object") {
+        if (parsed.showMainIcon !== undefined) root.showMainIcon = parsed.showMainIcon === true
+        if (parsed.iconOnly !== undefined) root.iconOnly = parsed.iconOnly === true
+        if (parsed.barIcon !== undefined && typeof parsed.barIcon === "string" && parsed.barIcon.length > 0) root.barIcon = parsed.barIcon
         if (parsed.showCpu !== undefined) root.showCpu = parsed.showCpu === true
         if (parsed.showRam !== undefined) root.showRam = parsed.showRam === true
         if (parsed.showStorage !== undefined) root.showStorage = parsed.showStorage === true
@@ -264,6 +276,9 @@ BarWidget {
 
   function saveSettings() {
     var data = {
+      showMainIcon: root.showMainIcon,
+      iconOnly: root.iconOnly,
+      barIcon: root.barIcon,
       showCpu: root.showCpu,
       showRam: root.showRam,
       showStorage: root.showStorage,
@@ -284,6 +299,9 @@ BarWidget {
 
   function resetDefaults() {
     var def = Model.defaultSettings()
+    root.showMainIcon = def.showMainIcon
+    root.iconOnly = def.iconOnly
+    root.barIcon = def.barIcon
     root.showCpu = def.showCpu
     root.showRam = def.showRam
     root.showStorage = def.showStorage
@@ -315,11 +333,11 @@ BarWidget {
     labelVisible: false
     hasVisualContent: root.hasAnyMetricVisible
     tooltipText: root.tooltipString
-    horizontalMargin: 8
-    verticalPadding: 6
+    horizontalMargin: root.isIconOnlyMode ? 0 : 8
+    verticalPadding: root.isIconOnlyMode ? 0 : 6
 
-    fixedWidth: root.vertical ? -1 : (barContentRow.implicitWidth + button.scaledHorizontalMargin * 2)
-    fixedHeight: root.vertical ? (barContentCol.implicitHeight + button.scaledVerticalPadding * 2) : -1
+    fixedWidth: root.vertical ? -1 : (root.isIconOnlyMode ? Style.bar.iconSlot : (barContentRow.implicitWidth + button.scaledHorizontalMargin * 2))
+    fixedHeight: root.vertical ? (root.isIconOnlyMode ? Style.bar.iconSlot : (barContentCol.implicitHeight + button.scaledVerticalPadding * 2)) : -1
 
     onPressed: function(b) {
       if (b === Qt.RightButton) {
@@ -331,12 +349,46 @@ BarWidget {
       }
     }
 
+    // Icon-Only Container (Active in Icon-Only Mode OR when all stats are removed)
+    Item {
+      id: iconOnlyContainer
+      visible: root.isIconOnlyMode
+      anchors.centerIn: parent
+      width: Style.bar.iconSlot
+      height: Style.bar.iconSlot
+
+      Text {
+        anchors.centerIn: parent
+        textFormat: Text.PlainText
+        text: root.barIcon && root.barIcon.length > 0 ? root.barIcon : ""
+        font.family: Style.font.family
+        font.pixelSize: Style.bar.iconFont
+        color: root.anyUrgent ? root.activeUrgentColor : Color.accent
+        renderType: Text.NativeRendering
+      }
+    }
+
     // Horizontal Layout (Standard Bar)
     Row {
       id: barContentRow
-      visible: !root.vertical
+      visible: !root.vertical && !root.isIconOnlyMode
       anchors.centerIn: parent
       spacing: Style.space(9)
+
+      // Main Widget Icon (When showMainIcon is enabled alongside stats)
+      Row {
+        visible: root.showMainIcon
+        anchors.verticalCenter: parent.verticalCenter
+
+        Text {
+          textFormat: Text.PlainText
+          text: root.barIcon && root.barIcon.length > 0 ? root.barIcon : ""
+          font.family: Style.font.family
+          font.pixelSize: Style.font.body
+          color: root.anyUrgent ? root.activeUrgentColor : Color.accent
+          anchors.verticalCenter: parent.verticalCenter
+        }
+      }
 
       // CPU Metric
       Row {
@@ -494,9 +546,23 @@ BarWidget {
     // Vertical Layout (Vertical Bar)
     Column {
       id: barContentCol
-      visible: root.vertical
+      visible: root.vertical && !root.isIconOnlyMode
       anchors.centerIn: parent
       spacing: Style.space(4)
+
+      // Main Widget Icon (When showMainIcon is enabled alongside stats)
+      Row {
+        visible: root.showMainIcon
+        anchors.horizontalCenter: parent.horizontalCenter
+
+        Text {
+          textFormat: Text.PlainText
+          text: root.barIcon && root.barIcon.length > 0 ? root.barIcon : ""
+          font.family: Style.font.family
+          font.pixelSize: Style.font.caption
+          color: root.anyUrgent ? root.activeUrgentColor : Color.accent
+        }
+      }
 
       Row {
         visible: root.showCpu
@@ -597,8 +663,8 @@ BarWidget {
       anchors.right: isVert ? parent.right : undefined
       anchors.horizontalCenter: isVert ? undefined : parent.horizontalCenter
       anchors.verticalCenter: isVert ? parent.verticalCenter : undefined
-      width: isVert ? Style.space(2) : Math.max(Style.space(18), barContentRow.implicitWidth * 0.4)
-      height: isVert ? Math.max(Style.space(18), barContentCol.implicitHeight * 0.4) : Style.space(2)
+      width: isVert ? Style.space(2) : (root.isIconOnlyMode ? Style.space(14) : Math.max(Style.space(18), barContentRow.implicitWidth * 0.4))
+      height: isVert ? (root.isIconOnlyMode ? Style.space(14) : Math.max(Style.space(18), barContentCol.implicitHeight * 0.4)) : Style.space(2)
       radius: Style.cornerRadius > 0 ? 1 : 0
     }
   }
@@ -653,7 +719,7 @@ BarWidget {
 
               Text {
                 anchors.centerIn: parent
-                text: ""
+                text: root.barIcon && root.barIcon.length > 0 ? root.barIcon : ""
                 font.family: Style.font.family
                 font.pixelSize: Style.font.display
                 color: Color.accent
@@ -1333,6 +1399,88 @@ BarWidget {
           Column {
             width: parent.width
             spacing: Style.space(6)
+
+            Toggle {
+              width: parent.width
+              label: "Show System Monitor Icon"
+              description: "Display the main system icon on the topbar"
+              checked: root.showMainIcon
+              onClicked: {
+                root.showMainIcon = !root.showMainIcon
+                root.saveSettings()
+              }
+            }
+
+            Toggle {
+              width: parent.width
+              label: "Icon-Only Mode"
+              description: "Keep only 1 icon on the bar (clicking opens the stats popup)"
+              checked: root.isIconOnlyMode
+              onClicked: {
+                root.iconOnly = !root.isIconOnlyMode
+                root.saveSettings()
+              }
+            }
+
+            // Topbar Icon Selector
+            Column {
+              width: parent.width
+              spacing: Style.space(5)
+              visible: root.showMainIcon || root.isIconOnlyMode
+
+              Text {
+                text: "Select Topbar Icon:"
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+                color: Qt.darker(Color.popups.text, 1.4)
+              }
+
+              Row {
+                width: parent.width
+                spacing: Style.space(5)
+
+                Repeater {
+                  model: [
+                    { icon: "", name: "CPU" },
+                    { icon: "󰻠", name: "Gauge" },
+                    { icon: "", name: "Activity" },
+                    { icon: "󰍛", name: "Chip" },
+                    { icon: "󰋊", name: "Storage" },
+                    { icon: "󰾆", name: "Dashboard" }
+                  ]
+
+                  Button {
+                    required property var modelData
+                    text: modelData.icon
+                    tooltipText: modelData.name
+                    selected: root.barIcon === modelData.icon
+                    bordered: true
+                    fontSize: Style.font.body
+                    horizontalPadding: Style.space(8)
+                    verticalPadding: Style.space(4)
+                    onClicked: {
+                      root.barIcon = modelData.icon
+                      root.saveSettings()
+                    }
+                  }
+                }
+
+                TextField {
+                  width: Style.space(48)
+                  text: root.barIcon
+                  placeholderText: ""
+                  horizontalAlignment: TextInput.AlignHCenter
+                  onEditingFinished: {
+                    if (text.trim().length > 0) {
+                      root.barIcon = text.trim()
+                      root.saveSettings()
+                    }
+                  }
+                }
+              }
+            }
+
+            PanelSeparator {}
 
             Toggle {
               width: parent.width

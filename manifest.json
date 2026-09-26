@@ -20,6 +20,9 @@
     "allowMultiple": false,
     "defaultSection": "right",
     "defaults": {
+      "showMainIcon": true,
+      "iconOnly": false,
+      "barIcon": "",
       "showCpu": true,
       "showRam": true,
       "showStorage": true,
@@ -30,6 +33,27 @@
       "refreshInterval": 2000
     },
     "schema": [
+      {
+        "key": "showMainIcon",
+        "type": "boolean",
+        "label": "Show Main Icon on topbar",
+        "defaultValue": true,
+        "description": "Display the system monitor icon on the topbar. If all stats are disabled, this icon remains so clicking opens the popup."
+      },
+      {
+        "key": "iconOnly",
+        "type": "boolean",
+        "label": "Icon only mode",
+        "defaultValue": false,
+        "description": "Show a single icon instead of live stats on the topbar. Clicking the icon opens the detailed stats popup."
+      },
+      {
+        "key": "barIcon",
+        "type": "string",
+        "label": "Topbar icon",
+        "defaultValue": "",
+        "description": "Nerd Font icon displayed on the topbar when Icon Only mode is enabled."
+      },
       {
         "key": "showCpu",
         "type": "boolean",
